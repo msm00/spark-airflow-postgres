@@ -1,0 +1,87 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: spark-etl-job
+  namespace: data-processing
+spec:
+  schedule: "0 1 * * *"  # Každý den v 1:00 ráno
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: spark-etl
+            image: msm00/spark-etl-project:latest
+            imagePullPolicy: IfNotPresent
+            command: ["python", "-m", "pyspark_etl_project.etl"]
+            env:
+            - name: POSTGRES_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: etl-config
+                  key: postgres-host
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: etl-config
+                  key: postgres-db
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
+            volumeMounts:
+            - name: data-volume
+              mountPath: /app/data
+            resources:
+              requests:
+                memory: "2Gi"
+                cpu: "500m"
+              limits:
+                memory: "4Gi"
+                cpu: "1"
+          volumes:
+          - name: data-volume
+            persistentVolumeClaim:
+              claimName: data-pvc
+          restartPolicy: OnFailure
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: etl-config
+  namespace: data-processing
+data:
+  postgres-host: "postgres.data-processing.svc.cluster.local"
+  postgres-db: "etl_db"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-credentials
+  namespace: data-processing
+type: Opaque
+data:
+  username: cG9zdGdyZXM=  # postgres (base64)
+  password: cG9zdGdyZXM=  # postgres (base64)
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: data-pvc
+  namespace: data-processing
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard 
