@@ -1,52 +1,57 @@
-# 🐍 Základní image s podporou Pythonu
+# Base image s podporou Pythonu
 FROM python:3.11-slim
 
-# 📦 Základní systémové balíčky (pro Spark a Poetry)
+# Proměnné prostředí
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=off \
+    PIP_DISABLE_PIP_VERSION_CHECK=on
+
+# Systémové závislosti
 RUN apt-get update && apt-get install -y \
     default-jre \
     curl \
     wget \
-    gnupg \
     git \
-    && apt-get clean
+    procps \
+    libpq-dev \
+    gcc \
+    python3-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# 🌍 Nastavení JAVA_HOME, které Spark vyžaduje
-ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-arm64
+# Nastavení JAVA_HOME pro Spark
+ENV JAVA_HOME=/usr/lib/jvm/default-java
 ENV PATH="$JAVA_HOME/bin:$PATH"
 
-# 🔥 Instalace Apache Spark (verze 3.5.0 jako příklad)
-ENV SPARK_VERSION=3.5.0
-RUN curl -L https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz | \
-    tar -xz -C /opt/ && \
-    ln -s /opt/spark-${SPARK_VERSION}-bin-hadoop3 /opt/spark
-
-# ✳️ Nastavení Spark proměnných
-ENV SPARK_HOME=/opt/spark
-ENV PATH="$SPARK_HOME/bin:$PATH"
-
-# 📥 Stažení PostgreSQL JDBC driveru
-RUN mkdir -p /app && \
-    curl -L -o /app/postgresql-42.2.5.jar https://jdbc.postgresql.org/download/postgresql-42.2.5.jar
-
-# 🐍 Instalace Poetry
-RUN curl -sSL https://install.python-poetry.org | python3 -
-
-# ✳️ Přidání Poetry do PATH
-ENV PATH="/root/.local/bin:$PATH"
-
-# 📂 Pracovní adresář v kontejneru
+# Vytvoření pracovního adresáře
 WORKDIR /app
 
-# 🗂️ Zkopírování celého projektu
-COPY . /app/
+# Kopírování a instalace Python závislostí
+COPY requirements.txt /app/
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt
 
-# 📦 Instalace Python závislostí pomocí Poetry
-RUN pip install --upgrade pip wheel setuptools && \
-    if [ -f /app/pyproject.toml ]; then \
-    poetry config virtualenvs.create false && poetry install --no-root; \
-    else \
-    pip install pyspark psycopg2-binary; \
-    fi
+# Kopírování Spark jobů
+COPY spark_jobs/ /app/spark_jobs/
 
-# 🟡 Nastavení vstupního bodu
-CMD ["python", "-m", "pyspark_etl_project.etl"]
+# Přidání PostgreSQL JDBC driveru pro Spark
+ARG POSTGRES_JDBC_VERSION=42.6.0
+RUN mkdir -p /app/lib && \
+    curl -L -o /app/lib/postgresql-${POSTGRES_JDBC_VERSION}.jar \
+    https://jdbc.postgresql.org/download/postgresql-${POSTGRES_JDBC_VERSION}.jar
+
+# Nastavení Spark proměnných
+ENV SPARK_CLASSPATH=/app/lib/postgresql-${POSTGRES_JDBC_VERSION}.jar
+
+# Přidání Python cesty
+ENV PYTHONPATH="${PYTHONPATH}:/app"
+
+# Vytvoření adresáře pro data
+RUN mkdir -p /app/data
+
+# Kopírování testů
+COPY tests/ /app/tests/
+
+# Spuštění ETL procesu
+CMD ["python", "/app/spark_jobs/etl_process.py"]

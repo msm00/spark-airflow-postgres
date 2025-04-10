@@ -1,46 +1,31 @@
-# 🔥 Spark ETL Project
+# 🚀 Spark-Airflow-Postgres
 
-Profesionální ETL projekt pro zpracování dat pomocí Apache Spark a uložení do PostgreSQL databáze.
+Projekt pro automatizaci a orchestraci ETL procesů pomocí Apache Airflow, Apache Spark a PostgreSQL.
+
+## 🔥 Přehled
+
+Tento projekt implementuje datovou pipeline, která automatizuje zpracování dat pomocí Apache Airflow, transformace provádí v Apache Spark a ukládá výsledky do PostgreSQL databáze.
 
 ## 🚀 Funkce
 
-- ⚡ ETL proces pomocí Apache Spark
-- 🐘 Ukládání dat do PostgreSQL
-- 🐳 Kompletní Docker prostředí
-- 🧮 Transformace CSV dat
-- 📊 Správa pomocí pgAdmin
-- 🔄 CI/CD pipeline s GitHub Actions
-- 📅 Plánování úloh pomocí Apache Airflow
-- 📈 Monitoring pomocí Prometheus a Grafana
-- 🧩 Kubernetes konfigurace pro orchestraci
-- 🧹 Automatické čištění Docker artefaktů
-- 🔐 Správa proměnných prostředí a tajných klíčů
+- 🌊 Automatizace a orchestrace ETL procesů pomocí Apache Airflow
+- ⚡ Zpracování a transformace dat s využitím Apache Spark
+- 🐘 Ukládání a přístup k datům přes PostgreSQL
+- 📊 Správa databáze pomocí pgAdmin
 
 ## 📊 Architektura
 
-Projekt se skládá z několika komponent:
+Projekt využívá následující komponenty:
 
-1. **Spark ETL Kontejner** - Zpracovává a transformuje data z CSV souborů
-2. **PostgreSQL Databáze** - Uložiště pro transformovaná data
-3. **pgAdmin** - Webové rozhraní pro správu databáze
-4. **Airflow** - Orchestrace a plánování ETL procesů
-5. **Prometheus/Grafana** - Monitoring a vizualizace metrik
-6. **Logstash** - Zpracování a analýza logů
-
-## 🛠️ Technologie
-
-- Apache Spark 3.5.0
-- Python 3.11
-- PostgreSQL
-- Docker & Docker Compose
-- Apache Airflow
-- Prometheus & Grafana
-- Kubernetes
-- GitHub Actions
+1. **Apache Airflow** - Orchestrace a plánování ETL procesů
+2. **Apache Spark** - Zpracování a transformace dat
+3. **PostgreSQL** - Persistentní uložiště pro výsledná data
+4. **pgAdmin** - Webové rozhraní pro správu PostgreSQL
 
 ## ⚙️ Instalace a spuštění
 
 ### Požadavky
+
 - Docker a Docker Compose
 - Git
 
@@ -48,107 +33,70 @@ Projekt se skládá z několika komponent:
 
 ```bash
 # Klonování repozitáře
-git clone https://github.com/msm00/spark-etl-project.git
-cd spark-etl-project
+git clone https://github.com/msm00/spark-airflow-postgres.git
+cd spark-airflow-postgres
 
-# Spuštění pomocí skriptu (vytvoří .env soubor a spustí služby)
-bash scripts/start.sh dev
-```
+# Kopírování konfiguračního souboru
+cp .env.example .env
 
-### Manuální spuštění
-
-```bash
-# Spuštění vývojového prostředí
+# Spuštění služeb
 docker-compose up -d
-
-# Spuštění produkčního prostředí
-docker-compose -f docker-compose.prod.yml up -d
-
-# Spuštění pouze ETL procesu
-docker-compose up spark-etl
-```
-
-### Čištění Docker artefaktů
-
-```bash
-# Manuální čištění
-bash scripts/docker_cleanup.sh
-
-# Automatické čištění (nastavení v crontab)
-# 0 1 * * 0 /path/to/docker_cleanup.sh
 ```
 
 ### Přístup k webovým rozhraním
 
+- **Airflow**: http://localhost:8080
+  - Uživatel: airflow
+  - Heslo: airflow
 - **pgAdmin**: http://localhost:5050
   - Email: admin@example.com
   - Heslo: admin
-- **Airflow** (pouze v produkci): http://localhost:8080
-- **Prometheus** (pouze v produkci): http://localhost:9090
-- **Grafana** (pouze v produkci): http://localhost:3000
-  - Uživatel: admin
-  - Heslo: admin
+- **Spark UI**: http://localhost:8090 (dostupné během běhu Spark úlohy)
 
-## 🧪 Testování
+## 📋 Použití
 
-```bash
-# Spuštění jednotkových testů
-python -m pytest tests/
+### Spuštění ETL procesu
 
-# Spuštění testů s pokrytím
-python -m pytest --cov=pyspark_etl_project tests/
-```
+ETL procesy jsou definovány jako Airflow DAGy v adresáři `airflow/dags`. Proces můžete spustit manuálně z Airflow UI nebo se spustí automaticky podle nastaveného rozvrhu.
 
-## 📦 CI/CD Pipeline
+### Vytvoření Spark jobu
 
-Projekt používá GitHub Actions pro automatický:
-- Lint a kontrolu kódu
-- Spuštění testů
-- Build a push Docker image
-- Čištění starých Docker images
-
-## 🔧 Kubernetes Deployment
-
-Pro nasazení do Kubernetes:
-
-```bash
-kubectl apply -f kubernetes/spark-etl-job.yaml
-```
+1. Přidejte nový Python soubor do adresáře `spark_jobs/`
+2. Implementujte transformační logiku
+3. Integrujte Spark job s Airflow pomocí SparkSubmitOperator
 
 ## 📁 Struktura projektu
 
 ```
 .
-├── Dockerfile                   # Definice Docker image pro Spark ETL
-├── docker-compose.yml           # Konfigurace služeb pro vývoj
-├── docker-compose.prod.yml      # Konfigurace služeb pro produkci
-├── .github/workflows/           # CI/CD konfigurace
-│   └── ci-cd.yml
 ├── airflow/                     # Apache Airflow konfigurace
 │   ├── dags/                    # DAG definice
+│   │   └── spark_etl_dag.py     # Ukázkový ETL DAG
 │   └── plugins/                 # Airflow pluginy
-├── kubernetes/                  # Kubernetes konfigurace
-│   └── spark-etl-job.yaml       # Job definice
-├── monitoring/                  # Monitoring konfigurace
-│   ├── prometheus/              # Prometheus konfigurace
-│   └── grafana/                 # Grafana dashboardy
-├── scripts/                     # Pomocné skripty
-│   ├── start.sh                 # Skript pro spuštění prostředí
-│   └── docker_cleanup.sh        # Skript pro čištění Docker
-├── data/                        # Adresář se zdrojovými daty
-│   └── users.csv                # Vzorová data
+├── spark_jobs/                  # Spark transformační skripty
+│   └── etl_process.py           # Ukázkový Spark job
 ├── db-init/                     # SQL skripty pro inicializaci databáze
-│   └── 01_create_users_table.sql
-├── pgadmin/                     # Konfigurace pgAdmin
-│   ├── pgpassfile
-│   └── servers.json
-├── pyspark_etl_project/         # Python kód pro ETL
-│   ├── __init__.py
-│   └── etl.py                   # Hlavní ETL skript
-└── tests/                       # Testy
-    ├── __init__.py
-    └── test_etl.py              # Testy pro ETL proces
+│   └── 01_create_tables.sql     # Definice tabulek
+├── data/                        # Adresář pro vstupní data
+│   └── sample_data.csv          # Vzorová data
+├── tests/                       # Testy
+│   ├── test_dags.py             # Testy pro Airflow DAGy
+│   └── test_spark_jobs.py       # Testy pro Spark joby
+├── docker-compose.yml           # Konfigurace služeb
+├── Dockerfile                   # Definice Docker image
+├── .env.example                 # Vzorová konfigurace prostředí
+├── requirements.txt             # Python závislosti
+└── README.md                    # Tato dokumentace
 ```
+
+## 🧑‍💻 Vývoj
+
+### Best Practices
+
+- Každý DAG musí mít dokumentaci
+- Implementujte retry mechanismy
+- Používejte connections pro správu přístupu k databázím
+- Optimalizujte Spark joby (používejte cache(), persist() s rozmyslem)
 
 ## 📝 Licence
 

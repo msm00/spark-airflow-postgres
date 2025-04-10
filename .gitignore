@@ -28,7 +28,15 @@ env/
 # Docker
 .docker/
 data/*
-!data/.gitkeep
+!data/sample_data.csv
+data/archive/
+
+# Airflow
+airflow/logs/
+airflow/*.log
+airflow/*.pid
+airflow/webserver_config.py
+airflow/.env
 
 # IDE
 .idea/
@@ -44,7 +52,17 @@ logs/
 *.db
 *.sqlite3
 
+# Testy
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
 # Misc
 .DS_Store
 .env
-.cursor/ 
+
+# Zachovat cursor pravidla
+!.cursor/ 

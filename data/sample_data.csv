@@ -1,0 +1,11 @@
+first_name,last_name,email,phone,address
+Jan,Novák,jan.novak@email.cz,+420601234567,"Pražská 123, Praha"
+Marie,Svobodová,marie.svobodova@gmail.com,+420721987654,"Brněnská 45, Brno"
+Petr,Černý,petr.cerny@seznam.cz,+420777123456,"Ostravská 78, Ostrava"
+Lucie,Dvořáková,lucie.dvorakova@email.cz,+420608765432,"Olomoucká 90, Olomouc"
+Tomáš,Procházka,tomas.prochazka@gmail.com,+420739876543,"Plzeňská 12, Plzeň"
+Kateřina,Veselá,katerina.vesela@seznam.cz,+420702345678,"Liberecká 34, Liberec"
+Martin,Kučera,martin.kucera@email.cz,+420773456789,"Budějovická 56, České Budějovice"
+Tereza,Marková,tereza.markova@gmail.com,+420799012345,"Karlovarská 78, Karlovy Vary"
+Jakub,Jelínek,jakub.jelinek@seznam.cz,+420619876543,"Hradecká 90, Hradec Králové"
+Eva,Benešová,eva.benesova@email.cz,+420765432198,"Pardubická 123, Pardubice" 

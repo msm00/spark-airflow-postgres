@@ -1,17 +1,43 @@
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.7.3
+  environment: &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:postgres@postgres/airflow
+    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
+    AIRFLOW_CONN_POSTGRES_DEFAULT: postgresql://postgres:postgres@postgres:5432/etl_db
+    AIRFLOW_CONN_SPARK_DEFAULT: spark://spark:7077
+  volumes:
+    - ./airflow/dags:/opt/airflow/dags
+    - ./airflow/logs:/opt/airflow/logs
+    - ./airflow/plugins:/opt/airflow/plugins
+    - ./spark_jobs:/opt/airflow/spark_jobs
+    - ./data:/opt/airflow/data
+  depends_on:
+    postgres:
+      condition: service_healthy
 
 services:
   postgres:
-    image: postgres:latest
+    image: postgres:15
     container_name: postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: etl_db
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./db-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      retries: 5
+    restart: always
+    command: postgres -c 'max_connections=200'
 
   pgadmin:
     image: dpage/pgadmin4
@@ -22,25 +48,88 @@ services:
     ports:
       - "5050:80"
     volumes:
-      - ./pgadmin/servers.json:/pgadmin4/servers.json
-      - ./pgadmin/pgpassfile:/pgadmin4/pgpassfile
+      - pgadmin_data:/var/lib/pgadmin
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
-  spark-etl:
-    build: .
-    container_name: spark-etl
-    volumes:
-      - ./data:/app/data
-    environment:
-      - SPARK_HOME=/opt/spark
-      - POSTGRES_HOST=postgres
-      - POSTGRES_DB=etl_db
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: airflow-webserver
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    restart: always
     depends_on:
       - postgres
-    command: ["python", "-m", "pyspark_etl_project.etl"]
+      - airflow-init
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: airflow-scheduler
+    command: scheduler
+    restart: always
+    depends_on:
+      - postgres
+      - airflow-init
+
+  airflow-init:
+    image: apache/airflow:2.7.3
+    container_name: airflow-init
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_DB_UPGRADE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_WWW_USER_USERNAME: airflow
+      _AIRFLOW_WWW_USER_PASSWORD: airflow
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+    command: version
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  spark:
+    image: bitnami/spark:3.5.0
+    container_name: spark
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    ports:
+      - "8090:8080"
+      - "7077:7077"
+    volumes:
+      - ./spark_jobs:/opt/bitnami/spark/jobs
+      - ./data:/opt/bitnami/spark/data
+
+  spark-worker:
+    image: bitnami/spark:3.5.0
+    container_name: spark-worker
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark:7077
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_CORES=1
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    volumes:
+      - ./spark_jobs:/opt/bitnami/spark/jobs
+      - ./data:/opt/bitnami/spark/data
+    depends_on:
+      - spark
 
 volumes:
   postgres_data:
+  pgadmin_data:
