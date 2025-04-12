@@ -1,4 +1,4 @@
-.PHONY: start stop restart status test test-isolated lint docker-build clean logs update-containers help
+.PHONY: start stop restart status test test-isolated lint docker-build clean logs update-containers help clean-all clean-images clean-volumes clean-networks prune
 
 # Standardní příkazy
 help:
@@ -14,6 +14,11 @@ help:
 	@echo "  make lint         - Spustí kontrolu kódu pomocí pylint"
 	@echo "  make docker-build - Sestaví všechny Docker image"
 	@echo "  make clean        - Vyčistí dočasné soubory a zastaví kontejnery"
+	@echo "  make clean-images - Vyčistí nepoužívané Docker images"
+	@echo "  make clean-volumes - Vyčistí nepoužívané Docker volumes"
+	@echo "  make clean-networks - Vyčistí nepoužívané Docker networks"
+	@echo "  make clean-all    - Kompletní vyčištění Docker prostředí"
+	@echo "  make prune        - Odstraní všechny nepoužívané Docker objekty"
 
 start:
 	docker-compose up -d
@@ -57,4 +62,24 @@ clean:
 	rm -rf __pycache__
 	rm -rf .pytest_cache
 	rm -rf test-reports
-	find . -name "*.pyc" -delete 
+	find . -name "*.pyc" -delete
+
+# Nové příkazy pro správu Docker prostředí
+clean-images:
+	@echo "Odstraňuji nepoužívané Docker images..."
+	docker image prune -a -f
+
+clean-volumes:
+	@echo "Odstraňuji nepoužívané Docker volumes..."
+	docker volume prune -f
+
+clean-networks:
+	@echo "Odstraňuji nepoužívané Docker networks..."
+	docker network prune -f
+
+clean-all: stop clean clean-images clean-volumes clean-networks
+	@echo "Docker prostředí bylo vyčištěno."
+
+prune:
+	@echo "Odstraňuji všechny nepoužívané Docker objekty..."
+	docker system prune -a -f --volumes 
