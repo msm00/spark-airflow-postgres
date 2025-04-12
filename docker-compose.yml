@@ -9,12 +9,21 @@ x-airflow-common: &airflow-common
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
     AIRFLOW_CONN_POSTGRES_DEFAULT: postgresql://postgres:postgres@postgres:5432/etl_db
     AIRFLOW_CONN_SPARK_DEFAULT: spark://spark:7077
+    PYTHONPATH: /opt/airflow/spark_jobs:/opt/airflow/tests
+    _PIP_ADDITIONAL_REQUIREMENTS: >
+      apache-airflow-providers-apache-spark==4.1.1
+      apache-airflow-providers-postgres==5.6.0
+      apache-airflow-providers-common-sql==1.7.2
+      pytest>=7.4.3
+      pytest-mock>=3.10.0
+      pandas~=2.0.3
   volumes:
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
     - ./airflow/plugins:/opt/airflow/plugins
     - ./spark_jobs:/opt/airflow/spark_jobs
     - ./data:/opt/airflow/data
+    - ./tests:/opt/airflow/tests
   depends_on:
     postgres:
       condition: service_healthy
@@ -91,6 +100,9 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
+      - ./spark_jobs:/opt/airflow/spark_jobs
+      - ./data:/opt/airflow/data
+      - ./tests:/opt/airflow/tests
     command: version
     depends_on:
       postgres:
@@ -105,12 +117,16 @@ services:
       - SPARK_RPC_ENCRYPTION_ENABLED=no
       - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
       - SPARK_SSL_ENABLED=no
+      - PYTHONPATH=/opt/bitnami/spark/jobs:/opt/bitnami/spark/tests
     ports:
       - "8090:8080"
       - "7077:7077"
     volumes:
       - ./spark_jobs:/opt/bitnami/spark/jobs
       - ./data:/opt/bitnami/spark/data
+      - ./tests:/opt/bitnami/spark/tests
+      - ./jdbc_drivers:/opt/bitnami/spark/jdbc_drivers
+    command: bash -c "pip install pytest pytest-mock pandas && /opt/bitnami/scripts/spark/entrypoint.sh"
 
   spark-worker:
     image: bitnami/spark:3.5.0
@@ -124,12 +140,17 @@ services:
       - SPARK_RPC_ENCRYPTION_ENABLED=no
       - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
       - SPARK_SSL_ENABLED=no
+      - PYTHONPATH=/opt/bitnami/spark/jobs:/opt/bitnami/spark/tests
     volumes:
       - ./spark_jobs:/opt/bitnami/spark/jobs
       - ./data:/opt/bitnami/spark/data
+      - ./tests:/opt/bitnami/spark/tests
+      - ./jdbc_drivers:/opt/bitnami/spark/jdbc_drivers
+    command: bash -c "pip install pytest pytest-mock pandas && /opt/bitnami/scripts/spark/entrypoint.sh"
     depends_on:
       - spark
 
 volumes:
   postgres_data:
   pgadmin_data:
+  spark_jars:

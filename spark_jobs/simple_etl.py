@@ -5,11 +5,12 @@ import sys
 
 def create_spark_session():
     """
-    Vytvoří a vrátí SparkSession s PostgreSQL JDBC driver
+    Vytvoří a vrátí SparkSession pro lokální mód s JDBC driverem
     """
     return SparkSession.builder \
-        .appName("Spark ETL Process") \
-        .config("spark.jars.packages", "org.postgresql:postgresql:42.6.0") \
+        .appName("Simple ETL Process") \
+        .master("local[*]") \
+        .config("spark.driver.extraClassPath", "/opt/bitnami/spark/jdbc_drivers/postgresql-42.6.0.jar") \
         .getOrCreate()
 
 def read_csv_data(spark, input_path):
@@ -23,7 +24,7 @@ def read_csv_data(spark, input_path):
 
 def transform_data(df):
     """
-    Provede transformaci dat
+    Provede transformaci dat - vytvoření username z jména a příjmení s odstraněním diakritiky
     """
     # Funkce pro odstranění diakritiky
     def remove_accents(col_name):
@@ -57,12 +58,10 @@ def write_to_postgres(df, table_name, mode="append"):
     """
     Zapíše DataFrame do PostgreSQL databáze
     """
-    # Získání proměnných prostředí nebo nastavení výchozích hodnot
-    jdbc_url = f"jdbc:postgresql://{os.environ.get('POSTGRES_HOST', 'postgres')}:5432/{os.environ.get('POSTGRES_DB', 'etl_db')}"
-    
+    jdbc_url = "jdbc:postgresql://postgres:5432/etl_db"
     properties = {
-        "user": os.environ.get("POSTGRES_USER", "postgres"),
-        "password": os.environ.get("POSTGRES_PASSWORD", "postgres"),
+        "user": "postgres",
+        "password": "postgres",
         "driver": "org.postgresql.Driver"
     }
     
@@ -74,8 +73,8 @@ def main():
     Hlavní ETL funkce
     """
     # Výchozí hodnoty
-    input_path = os.environ.get("INPUT_PATH", "/opt/bitnami/spark/data/sample_data.csv")
-    table_name = os.environ.get("OUTPUT_TABLE", "users")
+    input_path = "/opt/bitnami/spark/data/sample_data.csv"
+    table_name = "users_transformed"
     
     # Zpracování argumentů příkazové řádky
     if len(sys.argv) > 1:
@@ -94,18 +93,24 @@ def main():
         # Transformace dat
         transformed_df = transform_data(df)
         
+        # Zobrazení transformovaných dat
+        print("Transformovaná data:")
+        transformed_df.show(truncate=False)
+        
         # Zápis do PostgreSQL
         write_to_postgres(transformed_df, table_name)
         
-        print(f"Data byla úspěšně načtena do tabulky '{table_name}' v PostgreSQL.")
+        print(f"Data byla úspěšně transformována a uložena do tabulky {table_name}")
         
     except Exception as e:
         print(f"Chyba při zpracování dat: {str(e)}")
-        spark.stop()
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
     finally:
         # Ukončení SparkSession
-        spark.stop()
+        if 'spark' in locals():
+            spark.stop()
         
 if __name__ == "__main__":
     main() 

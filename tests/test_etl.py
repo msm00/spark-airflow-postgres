@@ -4,6 +4,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
 import tempfile
 import csv
+import sys
 
 # Importujeme testovaný kód
 # Pro testy v izolaci bez externích závislostí budeme používat mock data
@@ -43,23 +44,20 @@ class TestETLProcess(unittest.TestCase):
         
     def test_username_transformation(self):
         """Test transformace dat - vytvoření username."""
-        from pyspark.sql.functions import lower, concat_ws, regexp_replace
+        # Přidání spark_jobs do Python path pro import
+        sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'spark_jobs'))
+        from etl_process import transform_data
         
         # Načtení dat
         df = self.spark.read.csv(self.temp_csv, header=True, inferSchema=True)
         
-        # Aplikace transformace
-        transformed_df = df.select(
-            "first_name",
-            "last_name",
-            "email",
-            lower(regexp_replace(concat_ws("_", col("first_name"), col("last_name")), "\\s+", "_")).alias("username")
-        )
+        # Aplikace transformace s vlastní funkcí remove_accents
+        transformed_df = transform_data(df)
         
         # Ověření vytvoření username
         result = transformed_df.collect()
-        self.assertEqual(result[0]["username"], "jan_novák")
-        self.assertEqual(result[1]["username"], "petra_svobodová")
+        self.assertEqual(result[0]["username"], "jan_novak")
+        self.assertEqual(result[1]["username"], "petra_svobodova")
         
     def test_data_schema(self):
         """Test schématu dat po transformaci."""

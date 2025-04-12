@@ -1,0 +1,48 @@
+# Testovací prostředí pro Spark-Airflow-Postgres stack
+FROM python:3.11-slim
+
+# Proměnné prostředí
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=off \
+    PIP_DISABLE_PIP_VERSION_CHECK=on \
+    PYTHONPATH=/app/spark_jobs:/app/tests
+
+# Instalace JDK a dalších závislostí pro Spark
+RUN apt-get update && apt-get install -y \
+    default-jre \
+    curl \
+    wget \
+    git \
+    procps \
+    libpq-dev \
+    gcc \
+    python3-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Nastavení JAVA_HOME pro Spark
+ENV JAVA_HOME=/usr/lib/jvm/default-java
+ENV PATH="$JAVA_HOME/bin:$PATH"
+
+# Vytvoření pracovního adresáře
+WORKDIR /app
+
+# Kopírování a instalace Python závislostí
+COPY requirements.txt /app/
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt
+
+# Přidání dalších závislostí pro testování
+RUN pip install \
+    pytest \
+    pytest-mock \
+    pytest-cov \
+    pytest-html \
+    pytest-xdist
+
+# Kopírování projektu
+COPY . /app/
+
+# Defaultní příkaz - spustí všechny testy
+CMD ["pytest", "-v", "tests/"] 

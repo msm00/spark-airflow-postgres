@@ -29,8 +29,9 @@ class TestSparkJobs:
     def sample_data(self, spark):
         """Vytvoří testovací DataFrame"""
         data = [
-            ("Jan", "Novák", "jan.novak@email.cz"),
-            ("Marie", "Svobodová", "marie.svobodova@gmail.com")
+            ("Jiří", "Dvořák", "jiri.dvorak@email.cz"),
+            ("Marie", "Svobodová", "marie.svobodova@gmail.com"),
+            ("František", "Němec", "frantisek.nemec@seznam.cz")
         ]
         schema = StructType([
             StructField("first_name", StringType(), True),
@@ -55,14 +56,15 @@ class TestSparkJobs:
         result_pd = result_df.toPandas()
         
         # Kontrola výsledku
-        assert len(result_pd) == 2
+        assert len(result_pd) == 3
         assert "username" in result_pd.columns
         assert "created_at" in result_pd.columns
         assert "updated_at" in result_pd.columns
         
-        # Kontrola transformace jmen na username
-        assert result_pd.loc[0, "username"] == "jan_novak"
-        assert result_pd.loc[1, "username"] == "marie_svobodova"
+        # Kontrola transformace jmen na username s odstraněním diakritiky
+        assert result_pd.loc[0, "username"] == "jiri_dvorak"
+        assert result_pd.loc[1, "username"] == "marie_svobodova" 
+        assert result_pd.loc[2, "username"] == "frantisek_nemec"
     
     def test_transform_data_with_empty_input(self, spark):
         """Test transformace s prázdným vstupem"""
