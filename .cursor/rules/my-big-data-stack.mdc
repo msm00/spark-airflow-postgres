@@ -1,9 +1,4 @@
 ---
-description: 
-globs: 
-alwaysApply: true
----
----
 description: Pravidla a best practices pro Spark-Airflow-Postgres stack
 globs: 
 alwaysApply: true
